@@ -3,6 +3,10 @@ Salah satu upaya untuk meningkatkan keamanan server adalah memasang HoneyPot unt
 
 # Instalasi
 
+# Instalasi Kali Linux
+```
+https://www.offensive-security.com/kali-linux-arm-images/
+```
 # Instalasi MongoDB
 ```
 echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
