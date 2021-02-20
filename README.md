@@ -22,7 +22,7 @@ systemctl enable docker
 ```
 cd /home/kali
 apt-get update
-sudo apt install libpcap-dev libnet-dev tshark
+sudo apt install libpcap-dev libnet-dev tshark #wireshark
 git clone https://github.com/zdresearch/OWASP-Honeypot.git
 cd OWASP-Honeypot
 pip install -r requirements.txt
@@ -52,7 +52,7 @@ Menjalankan module HoneyPot dengan konfigurasi default
 ```
 python3 ohp.py
 ```
-Menjalankan module API Server untuk menyediakan interface melalui browser yang dapat diakses pada 127.0.0.1:5000.
+Menjalankan module API Server untuk menyediakan WebUI + API melalui browser yang dapat diakses pada 127.0.0.1:5000.
 ```
 python3 ohp.py --start-api-server
 ```
