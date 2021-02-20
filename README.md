@@ -29,6 +29,7 @@ pip install -r requirements.txt
 ```
 
 # Konfigurasi HoneyPot
+Untuk menentukan module apa saja yang ingin diaktifkan:
 ```
 cd /home/kali/OWASP-Honeypot
 pico config.py
@@ -46,6 +47,15 @@ def user_configuration():
         "default_excluded_modules": "ftp/strong_password,ssh/strong_password,smtp/strong_password,http/basic_auth_strong_password"  # or any module name separated with comma
     }
 ```
+
+Jenis-jenis module yang ada:
+1. SSH
+2. FTP
+3. HTTP
+4. ICS
+5. SMTP
+
+Masing-masing module terdiri dari weak_password dan strong_password, dimana weak_password lebih ditujukan kepada aktifitas yang dilakukan penyerang setelah berhasil login dengan password, misalkan user:root password:123456, sedangkan strong_password ditujukan untuk memantau user dan password yang digunakan oleh penyerang untuk masuk ke system (misalkan penyerang berhasil mendapatkan password user dengan pendekatan sosial engineering) sehingga kita dapat mengetahui password user yang kompromis.
 
 # Menjalankan HoneyPot
 Menjalankan module HoneyPot dengan konfigurasi default
