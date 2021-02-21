@@ -37,7 +37,8 @@ pip install -r requirements.txt
 Menggunakan database mangodb lokal:
 ```
 apt-get install docker-compose
-docker-compose up #untuk membangun kembali image database yang terbaru
+docker-compose build #untuk mengupdate image database yang terbaru
+docker-compose up
 ```
 Untuk menentukan module apa saja yang ingin diaktifkan:
 ```
