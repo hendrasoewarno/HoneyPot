@@ -7,7 +7,8 @@ Salah satu upaya untuk meningkatkan keamanan server adalah memasang HoneyPot unt
 ```
 https://www.offensive-security.com/kali-linux-arm-images/
 ```
-# Instalasi MongoDB
+# Instalasi Database
+OWASP HoneyPot menggunakan database mongodb
 ```
 echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/4.4 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.4.list
 sudo apt-get update
@@ -66,7 +67,7 @@ Menjalankan module HoneyPot dengan konfigurasi default
 ```
 python3 ohp.py
 ```
-Menjalankan module API Server untuk menyediakan WebUI + API melalui browser yang dapat diakses pada 127.0.0.1:5000.
+Menjalankan section API Server untuk menyediakan WebUI + API melalui browser yang dapat diakses pada 127.0.0.1:5000.
 ```
 python3 ohp.py --start-api-server
 ```
