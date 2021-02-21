@@ -34,6 +34,11 @@ pip install -r requirements.txt
 ```
 
 # Konfigurasi Module HoneyPot
+Menggunakan database mangodb lokal:
+```
+apt-get install docker-compose
+docker-compose up #untuk membangun kembali image database yang terbaru
+```
 Untuk menentukan module apa saja yang ingin diaktifkan:
 ```
 cd /home/kali/OWASP-Honeypot
