@@ -33,7 +33,7 @@ cd OWASP-Honeypot
 pip install -r requirements.txt
 ```
 
-# Konfigurasi HoneyPot
+# Konfigurasi Module HoneyPot
 Untuk menentukan module apa saja yang ingin diaktifkan:
 ```
 cd /home/kali/OWASP-Honeypot
