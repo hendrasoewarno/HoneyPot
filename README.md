@@ -60,7 +60,7 @@ Jenis-jenis module yang ada:
 4. ICS
 5. SMTP
 
-Masing-masing module terdiri dari weak_password dan strong_password, dimana weak_password lebih ditujukan kepada aktifitas yang dilakukan penyerang setelah berhasil login dengan password, misalkan user:root password:123456, sedangkan strong_password ditujukan untuk memantau user dan password yang digunakan oleh penyerang untuk masuk ke system (misalkan penyerang berhasil mendapatkan password user dengan pendekatan sosial engineering) sehingga kita dapat mengetahui password user yang kompromis.
+Masing-masing module terdiri dari weak_password dan strong_password, dimana weak_password lebih ditujukan kepada aktifitas yang dilakukan penyerang setelah berhasil login dengan password, misalkan user:root password:123456, sedangkan strong_password ditujukan untuk memantau credential atas user dicoba dan password yang digunakan oleh penyerang untuk masuk ke system (misalkan penyerang berhasil mendapatkan user account, dan mencoba melakukan brute force atas password account tersebut, atau misalkan user telah mendapatkan user dan password melalui upaya sosial engineering) sehingga kita dapat mengetahui user dan password yang kompromis.
 
 # Menjalankan HoneyPot
 Menjalankan module HoneyPot dengan konfigurasi default
