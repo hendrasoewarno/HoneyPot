@@ -16,6 +16,7 @@ sudo apt-get update
 sudo apt-get install -y mongodb-org
 systemctl start mongod
 systemctl enable mongod
+mongo --version
 ```
 # Instalasi Docker
 ```
