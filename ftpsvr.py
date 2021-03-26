@@ -53,6 +53,8 @@ def threaded_client(conn, address, count, logger):
                 response='221 Goodbye.\r\n';
             elif request.lower().startswith(b"OPTS"):
                 response='200 OK.\r\n';
+            elif request.lower().startswith(b"SYST"):
+                response='215 UNIX Type: L8.\r\n';				
             elif request.startswith(b"USER"):
                 cmd = request.decode("utf-8")
                 userid = cmd[5:-2]
@@ -69,6 +71,8 @@ def threaded_client(conn, address, count, logger):
                 response='200 OK.\r\n';
             elif request.startswith(b"TYPE"):
                 response='200 Binary mode.\r\n';
+            elif request.startswith(b"PASV"):
+                response='502 Command not implemented.\r\n';							
 				
             if auth==1:    
                 if request.startswith(b"PWD") or request.startswith(b"XPWD"):
@@ -179,8 +183,8 @@ try:
 except Exception as e:
     print(str(e))
 
-logger.info("FTP HoneyPot " + VERSION + " ready at port " + port) 
-print("FTP HoneyPot " + VERSION + " ready at port " + port) 
+logger.info("FTP HoneyPot " + VERSION + " ready at port " + str(port))  
+print("FTP HoneyPot " + VERSION + " ready at port " + str(port))  
 ServerSocket.listen(5)
 
 while True:
