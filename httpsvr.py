@@ -104,8 +104,8 @@ try:
 except Exception as e:
     print(str(e))
 
-logger.info("HTTP HoneyPot " + VERSION + " ready at port " + port) 
-print("HTTP HoneyPot " + VERSION + " ready at port " + port)
+logger.info("HTTP HoneyPot " + VERSION + " ready at port " + str(port)) 
+print("HTTP HoneyPot " + VERSION + " ready at port " + str(port)) 
 ServerSocket.listen(5)
 
 while True:
