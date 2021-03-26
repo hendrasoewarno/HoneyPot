@@ -116,8 +116,8 @@ try:
 except Exception as e:
     print(str(e))
 
-logger.info("POP HoneyPot " + VERSION + " ready at port " + port) 
-print("POP HoneyPot " + VERSION + " ready at port " + port) 
+logger.info("POP HoneyPot " + VERSION + " ready at port " + str(port)) 
+print("POP HoneyPot " + VERSION + " ready at port " + str(port)) 
 ServerSocket.listen(5)
 
 while True:
