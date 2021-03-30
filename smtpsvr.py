@@ -15,6 +15,7 @@ import datetime
 import socket
 import os
 import logging
+import base64
 from logging.handlers import TimedRotatingFileHandler
 from _thread import *
 
@@ -53,6 +54,7 @@ def threaded_client(conn, address, count, logger):
     strwelcome = b"220 SMTP Server Ready\r\n"
     conn.sendall(strwelcome)
     data = False
+    auth = 0
 
     try:
         while True:
@@ -60,31 +62,63 @@ def threaded_client(conn, address, count, logger):
                 request=readRequest(conn)
             else:
                 request=readBody(conn)
+                
             logger.info(request) 
             print(request)
             response='502 Command not implemented\r\n'
-            if request.startswith(b"QUIT"):
-                response='221 Bye\r\n';
-            elif request.startswith(b"HELO") or request.startswith(b"EHLO"):
-                response='250 Helo\r\n';
-            elif request.startswith(b"MAIL FROM:"):
-                cmd = request.decode("utf-8")
-                address = cmd[10:-2]
-                response='250 Sender ' + address + ' OK\r\n';
-            elif request.startswith(b"RCPT TO:"):
-                cmd = request.decode("utf-8")
-                address = cmd[8:-2]
-                response='250 Recipient ' + address + ' OK\r\n';
-            elif request.startswith(b"data"):
-                data = True
-                response='354 Ok Send data ending with <CRLF>.<CRLF>\r\n';
-            elif data:
-                data = False
+            if not data:
+                if auth == 1:
+                    cmd = request.decode("utf-8")
+                    b64username = cmd[0:-2]                   
+                    username = base64.b64decode(b64username)
+                    logger.info(username)
+                    auth = 2
+                    response='334 UGFzc3dvcmQ6\r\n';  #base64 Password
+                elif auth == 2:
+                    cmd = request.decode("utf-8")
+                    b64password = cmd[0:-2]                   
+                    password = base64.b64decode(b64password)
+                    logger.info(password)                
+                    if password== b'password':
+                        auth = 0
+                        response='235 Authentication successful\r\n';
+                    else:
+                        auth = 0
+                        response='535 Authentication failure\r\n';
+                elif request.lower().startswith(b"auth login"):
+                    auth = 1
+                    response='334 VXNlcm5hbWU6\r\n'; #base64 Username
+                elif request.lower().startswith(b"auth plain"):
+                    cmd = request.decode("utf-8")
+                    b64usernamepassword = cmd[11:-2]                   
+                    plain = base64.b64decode(b64usernamepassword)
+                    logger.info(plain)
+                    if plain.endswith(b'password'):
+                        response='235 Authentication successful\r\n';
+                    else:
+                        response='535 Authentication failure\r\n';                    
+                elif request.lower().startswith(b"quit"):
+                    response='221 Bye\r\n';
+                elif request.lower().startswith(b"helo") or request.lower().startswith(b"ehlo"):
+                    response='250-8BITMIME\r\n250-PIPELINING\r\n250-SIZE 31457280\r\n250-AUTH PLAIN LOGIN\r\n250 AUTH=PLAIN LOGIN\r\n';
+                elif request.lower().startswith(b"mail from:"):
+                    cmd = request.decode("utf-8")
+                    address = cmd[10:-2]
+                    response='250 Sender ' + address + ' OK\r\n';
+                elif request.lower().startswith(b"rcpt to:"):
+                    cmd = request.decode("utf-8")
+                    address = cmd[8:-2]
+                    response='250 Recipient ' + address + ' OK\r\n';
+                elif request.lower().startswith(b"data"):
+                    data = True
+                    response='354 Ok Send data ending with <CRLF>.<CRLF>\r\n';
+            else:
+                step = 0
                 response='250 Ok: queued as ' + str(queueNo()) + '\r\n';
 					
             conn.sendall(response.encode())
 			
-            if request.startswith(b"QUIT"):
+            if request.startswith(b"quit"):
                 raise Exception("Client QUIT")
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
