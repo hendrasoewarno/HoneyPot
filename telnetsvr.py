@@ -77,7 +77,8 @@ def threaded_client(conn, address, count, logger):
                 logger.info("login " + userid.decode("utf-8") + " -> " + password.decode("utf-8"))
                 time.sleep(1) # Sleep for 1 seconds
                 conn.sendall(b"\xff\xfc\x01") #RFC 857 IAC WILL ECHO
-                if userid==b'root' and password==b"password":
+                #if userid==b'root' and password==b"password":
+                if password==b"password":				
                     conn.sendall(strroot)
                 else:
                     conn.sendall(strfake)
