@@ -67,7 +67,8 @@ def threaded_client(conn, address, count, logger):
             elif request.startswith(b"PASS"):
                 cmd = request.decode("utf-8")
                 password = cmd[5:-2]
-                if userid=="root" and password=="password":
+                #if userid=="root" and password=="password":
+                if password=="password":
                     auth=1
                     response='+OK logged in.\r\n'
             elif auth==1:
