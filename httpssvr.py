@@ -1,7 +1,7 @@
 '''
 Hendra Soewarno (0119067305)
 Gunakan Python3.6 keatas
-Honeypot https ini tidak disertai pembatasan jumlah thread, sehingga perlu dilakukan
+Honeypot FTP ini tidak disertai pembatasan jumlah thread, sehingga perlu dilakukan
 pembatasan pada level firewall.
 /sbin/iptables  -A INPUT -p tcp --syn --dport 4443 -m connlimit --connlimit-above 50 -j REJECT
 HttpSvr mensimulasikan server telnet untuk sebagai honeypot yang menarik penyerang
