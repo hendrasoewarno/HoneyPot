@@ -33,14 +33,20 @@ def threaded_client(conn, address, count, logger):
         while True:
             data = read(conn)
             #0001 0000 0006 15 03 006B 0003
+            '''
+            Transaction Id 	Protocol 	Length 	Unit Address 	Message/PDU
+            2 Bytes 	2 Bytes 	2 Bytes 	1 Byte       	N Bytes
+            '''
             MBAP = data[0:7]
             TransactionId = MBAP[0:2]
             ProtocolId = MBAP[2:4]
             Length = int.from_bytes(MBAP[4:6],byteorder='big')
             UnitId = MBAP[6:7]
-            FunctionCode = int.from_bytes(data[7:8],byteorder='big')
-            dataAddr = int.from_bytes(data[8:10],byteorder='big')
-            numOfRegister = int.from_bytes(data[10:12],byteorder='big')
+            
+            Message = data[7:] #PDU
+            FunctionCode = int.from_bytes(Message[0:1],byteorder='big')
+            dataAddr = int.from_bytes(Message[1:3],byteorder='big')
+            numOfRegister = int.from_bytes(Message[3:5],byteorder='big')
             
             #Response with dummy error data
             #https://ipc2u.com/articles/knowledge-base/detailed-description-of-the-modbus-tcp-protocol-with-command-examples/
