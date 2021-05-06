@@ -101,11 +101,6 @@ def refuseDNSA(packet):
     refused = b'\x80\x85'
     return packet[0:2] + refused +  packet[4:]
    
-#entry point
-#packet = b'\xdb\x42\x01\x00\x00\x01\x00\x01\x00\x00\x00\x00\x03\x77\x77\x77\x0c\x6e\x6f\x72\x74\x68\x65\x61\x73\x74\x65\x72\x6e\x03\x65\x64\x75\x00\x00\x01\x00\x01'
-#print(json.dumps(parseDNSQ(packet)))
-#exit()
-
 VERSION = "0.1a"
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
