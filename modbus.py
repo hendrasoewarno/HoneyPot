@@ -3,7 +3,7 @@ Hendra Soewarno (0119067305)
 Honeypot modbus ini tidak disertai pembatasan jumlah thread, sehingga perlu dilakukan
 pembatasan pada level firewall.
 /sbin/iptables  -A INPUT -p tcp --syn --dport 5502 -m connlimit --connlimit-above 50 -j REJECT
-Modbus mensimulasikan server telnet untuk sebagai honeypot yang menarik penyerang
+Modbus mensimulasikan server modbus untuk sebagai honeypot yang menarik penyerang
 untuk melakukan bruteforce password. Honeypot akan merekam semua userid dan password
 yang dicoba penyerang, sehingga menjadi early warning bagi administrator terkait dengan
 userid/password yang compromis.
