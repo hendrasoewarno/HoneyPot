@@ -131,11 +131,14 @@ print("POP3s HoneyPot " + VERSION + " ready at port " + str(port))
 ServerSocket.listen(5)
 
 SecureServerSocket=context.wrap_socket(ServerSocket, server_side=True)
-
 while True:
-    Client, address = SecureServerSocket.accept()
-    Client.settimeout(15)
-    ThreadCount += 1
-    start_new_thread(threaded_client, (Client, address, ThreadCount, logger))        
+    try:
+        Client, address = SecureServerSocket.accept()
+        Client.settimeout(15)
+        ThreadCount += 1
+        start_new_thread(threaded_client, (Client, address, ThreadCount, logger))
+    except Exception as e:
+        print(str(e))
+
 ServerSocket.close()
 
