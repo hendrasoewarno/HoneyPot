@@ -57,7 +57,7 @@ def threaded_client(conn, address, count, logger):
     try:
         while True:
             if not data:
-                request=readRequest(conn)
+                request=readRequest(conn).upper()
             else:
                 request=readBody(conn)
             logger.info(request) 
