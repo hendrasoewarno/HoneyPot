@@ -64,15 +64,15 @@ def threaded_client(conn, address, count, logger):
             logger.info(request) 
             print(request)
             response='502 Command not implemented\r\n'
-            if request.startswith(b"QUIT"):
+            if request.upper().startswith(b"QUIT"):
                 response='221 Bye\r\n';
-            elif request.startswith(b"HELO") or request.startswith(b"EHLO"):
+            elif request.upper().startswith(b"HELO") or request.upper().startswith(b"EHLO"):
                 response='250 Helo\r\n';
-            elif request.startswith(b"MAIL FROM:"):
+            elif request.upper().startswith(b"MAIL FROM:"):
                 cmd = request.decode("utf-8")
                 address = cmd[10:-2]
                 response='250 Sender ' + address + ' OK\r\n';
-            elif request.startswith(b"RCPT TO:"):
+            elif request.upper().startswith(b"RCPT TO:"):
                 cmd = request.decode("utf-8")
                 address = cmd[8:-2]
                 response='250 Recipient ' + address + ' OK\r\n';
@@ -85,7 +85,7 @@ def threaded_client(conn, address, count, logger):
 					
             conn.sendall(response.encode())
 			
-            if request.startswith(b"QUIT"):
+            if request.upper().startswith(b"QUIT"):
                 raise Exception("Client QUIT")
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
