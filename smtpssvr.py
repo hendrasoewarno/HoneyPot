@@ -126,8 +126,8 @@ try:
 except Exception as e:
     print(str(e))
 
-logger.info("SMTP HoneyPot " + VERSION + " ready at port " + str(port)) 
-print("SMTP HoneyPot " + VERSION + " ready at port " + str(port)) 
+logger.info("SMTPS HoneyPot " + VERSION + " ready at port " + str(port)) 
+print("SMTPS HoneyPot " + VERSION + " ready at port " + str(port)) 
 ServerSocket.listen(5)
 
 SecureServerSocket=context.wrap_socket(ServerSocket, server_side=True)
