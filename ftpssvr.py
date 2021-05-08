@@ -39,7 +39,7 @@ def threaded_client(conn, address, count, logger):
     time.sleep(2) # Sleep for 2 seconds
     strwelcome = b"220 Welcome to FTP server\r\n"
     conn.sendall(strwelcome)
-    cwd = "/var/www"
+    cwd = "/"
     auth = 0
     userid = ""
     password = ""
