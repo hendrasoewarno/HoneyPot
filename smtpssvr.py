@@ -72,8 +72,6 @@ def threaded_client(conn, address, count, logger):
                 cmd = request.decode("utf-8")
                 domain = cmd[5:-2]
                 response='250 Helo ' + domain + '\r\n';
-            elif request.upper().startswith(b"STARTTLS"):
-                response='220 Ready to start TLS\r\n';
             elif request.upper().startswith(b"VRFY"):
                 response='252 VRFY forbidden\r\n';
             elif request.upper().startswith(b"EXPN"):
