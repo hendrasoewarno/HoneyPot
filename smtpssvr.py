@@ -66,8 +66,18 @@ def threaded_client(conn, address, count, logger):
             response='502 Command not implemented\r\n'
             if request.upper().startswith(b"QUIT"):
                 response='221 Bye\r\n';
+            elif request.upper().startswith(b"RSET"):
+                response='250 Ok\r\n';                
             elif request.upper().startswith(b"HELO") or request.upper().startswith(b"EHLO"):
-                response='250 Helo\r\n';
+                cmd = request.decode("utf-8")
+                domain = cmd[5:-2]
+                response='250 Helo ' + domain + '\r\n';
+            elif request.upper().startswith(b"STARTTLS"):
+                response='220 Ready to start TLS\r\n';
+            elif request.upper().startswith(b"VRFY"):
+                response='252 VRFY forbidden\r\n';
+            elif request.upper().startswith(b"EXPN"):
+                response='252 EXPN forbidden\r\n';
             elif request.upper().startswith(b"MAIL FROM:"):
                 cmd = request.decode("utf-8")
                 address = cmd[10:-2]
