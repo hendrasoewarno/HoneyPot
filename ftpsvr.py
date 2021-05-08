@@ -13,6 +13,7 @@ nohup python /path/to/ftpsvr.py &
 import time
 import datetime  
 import socket
+import ssl
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -27,9 +28,15 @@ def readRequest(conn):
             raise Exception("disconnect from client")
         text += data
     return text
+
+#support AUTH TLS
+def chooseSocket(conn, TLSSSLconn):
+    if (TLSSSLconn):
+        return TLSSSLconn
+    return conn
 	
-def threaded_client(conn, address, count, logger):
-    #print (conn.getsockname())
+def threaded_client(conn, address, count, logger, context):
+    #print (conn.getsockname())    
     directory = "include"
     serverAddr = conn.getsockname()[0]
     clientAddr = address[0]
@@ -38,7 +45,7 @@ def threaded_client(conn, address, count, logger):
     time.sleep(2) # Sleep for 2 seconds
     strwelcome = b"220 Welcome to FTP server\r\n"
     conn.sendall(strwelcome)
-    cwd = "/var/www"
+    cwd = "/"
     auth = 0
     userid = ""
     password = ""
@@ -46,14 +53,20 @@ def threaded_client(conn, address, count, logger):
     nextSocket = None
     dataAddr = ""
     dataPort = 0
+    
+    TLSSSLconn = None
     try:
         while True:       
-            request=readRequest(conn)
+            request=readRequest(chooseSocket(conn, TLSSSLconn))
             logger.info(request) 
             print(request)
             response='500 Sorry.\r\n';
             if request.startswith(b"QUIT"):
                 response='221 Goodbye.\r\n';
+            elif request.startswith(b"AUTH TLS"):
+                response='234 AUTH TLS OK.\r\n';
+            elif request.startswith(b"AUTH SSL"):
+                response='234 AUTH SSL OK.\r\n';                
             elif request.lower().startswith(b"OPTS"):
                 response='200 OK.\r\n';
             elif request.lower().startswith(b"SYST"):
@@ -86,6 +99,7 @@ def threaded_client(conn, address, count, logger):
                     nextSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     nextSocket.bind((serverAddr,61200 + (count%1024))) #port >= 61200 s/d 62004
                     nextSocket.listen(1)
+                       
                     ip, port = nextSocket.getsockname()
                     response='227 Entering Passive Mode (%s,%u,%u).\r\n' % (','.join(ip.split('.')), port>>8&0xFF, port&0xFF)
                     print(response)
@@ -100,7 +114,7 @@ def threaded_client(conn, address, count, logger):
                     nextSocket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
                     
                 elif request.startswith(b"LIST") or request.startswith(b"NLST"):	
-                    conn.sendall(b'150 directory listing.\r\n')
+                    chooseSocket(conn, TLSSSLconn).sendall(b'150 directory listing.\r\n')
                     #datasock.sendall(b"\r\n-rw-r--r-- 1 root root     1555 Apr 20  2016 index.html\r\n\r\n")        
                     
                     if pasv:
@@ -132,7 +146,7 @@ def threaded_client(conn, address, count, logger):
                     print('GET:'+fn)
                     try:
                         file=open(directory + "/"+fn,'rb')
-                        conn.sendall(b'150 Opening data connection.\r\n')
+                        chooseSocket(conn, TLSSSLconn).sendall(b'150 Opening data connection.\r\n')
                         
                         if pasv:
                             sock, addr = nextSocket.accept() #PASV mode
@@ -157,7 +171,7 @@ def threaded_client(conn, address, count, logger):
                     fn=Path(cmd[5:-2]).name.replace(".",now,1)
                     print('PUT:'+fn)
                     file=open(directory + "/"+fn,'wb')
-                    conn.sendall(b'150 Opening data connection.\r\n')
+                    chooseSocket(conn, TLSSSLconn).sendall(b'150 Opening data connection.\r\n')
 
                     if pasv:
                         sock, addr = nextSocket.accept() #PASV mode
@@ -176,21 +190,27 @@ def threaded_client(conn, address, count, logger):
                     sock.close()
                     response='226 Transfer complete.\r\n'				
 	
-            conn.sendall(response.encode())
-			
+            chooseSocket(conn, TLSSSLconn).sendall(response.encode())
+                            
             if request.startswith(b"QUIT"):
                 auth=0
                 raise Exception("Client QUIT")
+            elif request.startswith(b"AUTH TLS"):
+                TLSSSLconn=context.wrap_socket(conn, server_side=True)
 				
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
         print(str(count)+"@"+clientAddr + " -> " + str(e))
-        conn.close()
+        chooseSocket(conn, TLSSSLconn).close()
     logger.info(str(count)+"@"+clientAddr + " -> disconnected")
     print(str(count)+"@"+clientAddr + " -> disconnected")
 
 #entry point
 VERSION = "0.1a"
+
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+#buat file pem dan key dari https://www.samltool.com/self_signed_certs.php
+context.load_cert_chain('certchain.pem', 'private.key')    
 
 ServerSocket = socket.socket()
 host = "0.0.0.0"
@@ -226,5 +246,5 @@ while True:
     Client, address = ServerSocket.accept()
     Client.settimeout(60)
     ThreadCount += 1
-    start_new_thread(threaded_client, (Client, address, ThreadCount, logger))        
+    start_new_thread(threaded_client, (Client, address, ThreadCount, logger, context))        
 ServerSocket.close()
