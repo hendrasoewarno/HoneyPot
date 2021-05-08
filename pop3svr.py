@@ -13,6 +13,7 @@ nohup python /path/to/pop3svr.py &
 import time
 import datetime  
 import socket
+import ssl
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -39,8 +40,15 @@ def readBody(conn):
     except:
         return text	
     return text
+    
+#support STLS
+def chooseSocket(conn, TLSSSLconn):
+    if (TLSSSLconn):
+        return TLSSSLconn
+    return conn    
 
-def threaded_client(conn, address, count, logger):
+
+def threaded_client(conn, address, count, logger, context):
     #print (conn.getsockname())
     serverAddr = conn.getsockname()[0]
     clientAddr = address[0]
@@ -52,14 +60,18 @@ def threaded_client(conn, address, count, logger):
     userid = ""
     password = ""
     auth = 0
+    TLSSSLconn = None
+    
     try:
         while True:       
-            request=readRequest(conn)
+            request=readRequest(chooseSocket(conn, TLSSSLconn))
             logger.info(request) 
             print(request)
             response='-ERR\r\n'
             if request.startswith(b"QUIT"):
                 response='+OK signing off\r\n';
+            elif request.upper().startswith(b"STLS"):
+                response='+OK Begin TLS negotiation\r\n';                
             elif request.startswith(b"USER"):
                 cmd = request.decode("utf-8")
                 userid = cmd[5:-2]
@@ -81,10 +93,13 @@ def threaded_client(conn, address, count, logger):
                 elif request.startswith(b"DELE"):
                     response='+OK Message deleted\r\n'		
 					
-            conn.sendall(response.encode())
-			
+            chooseSocket(conn, TLSSSLconn).sendall(response.encode())
+                            
             if request.startswith(b"QUIT"):
                 raise Exception("Client QUIT")
+            elif request.startswith(b"STLS"):
+                TLSSSLconn=context.wrap_socket(conn, server_side=True)
+                
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
         print(str(count)+"@"+clientAddr + " -> " + str(e))
@@ -94,6 +109,10 @@ def threaded_client(conn, address, count, logger):
 
 #entry point
 VERSION = "0.1a"
+
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+#buat file pem dan key dari https://www.samltool.com/self_signed_certs.php
+context.load_cert_chain('certchain.pem', 'private.key')    
 
 ServerSocket = socket.socket()
 host = "0.0.0.0"
@@ -127,5 +146,5 @@ while True:
     Client, address = ServerSocket.accept()
     Client.settimeout(60)
     ThreadCount += 1
-    start_new_thread(threaded_client, (Client, address, ThreadCount, logger))        
+    start_new_thread(threaded_client, (Client, address, ThreadCount, logger, context))         
 ServerSocket.close()
