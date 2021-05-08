@@ -13,6 +13,7 @@ nohup python /path/to/smtpsvr.py &
 import time
 import datetime  
 import socket
+import ssl
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -42,8 +43,14 @@ def readBody(conn):
     except:
         return text	
     return text
+    
+#support STARTTLS
+def chooseSocket(conn, TLSSSLconn):
+    if (TLSSSLconn):
+        return TLSSSLconn
+    return conn    
 
-def threaded_client(conn, address, count, logger):
+def threaded_client(conn, address, count, logger, context):
     #print (conn.getsockname())
     serverAddr = conn.getsockname()[0]
     clientAddr = address[0]
@@ -53,13 +60,14 @@ def threaded_client(conn, address, count, logger):
     strwelcome = b"220 SMTP Server Ready\r\n"
     conn.sendall(strwelcome)
     data = False
+    TLSSSLconn = None
 
     try:
         while True:
             if not data:
-                request=readRequest(conn)
+                request=readRequest(chooseSocket(conn, TLSSSLconn))
             else:
-                request=readBody(conn)
+                request=readBody(chooseSocket(conn, TLSSSLconn))
             logger.info(request) 
             print(request)
             response='502 Command not implemented\r\n'
@@ -92,19 +100,28 @@ def threaded_client(conn, address, count, logger):
                 data = False
                 response='250 Ok: queued as ' + str(queueNo()) + '\r\n';
 					
-            conn.sendall(response.encode())
+            chooseSocket(conn, TLSSSLconn).sendall(response.encode())
+                            
+            if request.startswith(b"QUIT"):
+                raise Exception("Client QUIT")
+            elif request.startswith(b"AUTH TLS"):
+                TLSSSLconn=context.wrap_socket(conn, server_side=True)
 			
             if request.upper().startswith(b"QUIT"):
                 raise Exception("Client QUIT")
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
         print(str(count)+"@"+clientAddr + " -> " + str(e))
-        conn.close()
+        chooseSocket(conn, TLSSSLconn).close()
     logger.info(str(count)+"@"+clientAddr + " -> disconnected")
     print(str(count)+"@"+clientAddr + " -> disconnected")
 
 #entry point
 VERSION = "0.1a"
+
+context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+#buat file pem dan key dari https://www.samltool.com/self_signed_certs.php
+context.load_cert_chain('certchain.pem', 'private.key')    
 
 ServerSocket = socket.socket()
 host = "0.0.0.0"
@@ -138,5 +155,5 @@ while True:
     Client, address = ServerSocket.accept()
     Client.settimeout(60)
     ThreadCount += 1
-    start_new_thread(threaded_client, (Client, address, ThreadCount, logger))        
+    start_new_thread(threaded_client, (Client, address, ThreadCount, logger, context))      
 ServerSocket.close()
