@@ -1,10 +1,10 @@
 '''
 Hendra Soewarno (0119067305)
 Gunakan Python3.6 keatas
-Honeypot FTP ini tidak disertai pembatasan jumlah thread, sehingga perlu dilakukan
+Honeypot HTTPS ini tidak disertai pembatasan jumlah thread, sehingga perlu dilakukan
 pembatasan pada level firewall.
 /sbin/iptables  -A INPUT -p tcp --syn --dport 4443 -m connlimit --connlimit-above 50 -j REJECT
-HttpSvr mensimulasikan server http untuk sebagai honeypot yang menarik penyerang
+HttpsSvr mensimulasikan server https untuk sebagai honeypot yang menarik penyerang
 untuk melakukan bruteforce password. Honeypot akan merekam semua userid dan password
 yang dicoba penyerang, sehingga menjadi early warning bagi administrator terkait dengan
 userid/password yang compromis.
@@ -19,6 +19,7 @@ import select
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from _thread import *
+import os
 
 def readRequest(conn):
     text = b""
@@ -46,38 +47,82 @@ def threaded_client(conn, address, count, logger):
     #print (conn.getsockname())
     serverAddr = conn.getsockname()[0]
     clientAddr = address[0]
-    logger.info(str(count)+"@"+clientAddr + " -> connected to " + serverAddr) 
+    logger.info(str(count)+"@"+clientAddr + " -> connected to " + serverAddr)
     print(str(count)+"@"+clientAddr + " -> connected to " + serverAddr)   
     try:
         response = 'HTTP/1.0 404 NOT FOUND\n\n<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN"><html><head><title>404 Not Found</title></head><body><h1>Not Found</h1><p>The requested URL was not found on this server.</p></body></html>'
         while True:       
             request=readRequest(conn)
-            body=b""
             print(request)
+            body=b""
+            now = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+            
             if request.startswith(b"GET /"):
-                if request.startswith(b"GET / "):
+                if request.startswith(b"GET / ") or request.startswith(b"GET /index.html "):
                     # Get the content of index.html
-                    fin = open('index.html')
+                    fin = open('index.html', 'rb')
                     content = fin.read()
                     fin.close()
 
                     # Send HTTP response
-                    now = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-                    response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: text/html;charset=UTF-8\nContent-Length:' + str(len(content)) +'\n\n' + content
+                    response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: text/html;charset=UTF-8\nContent-Length:' + str(len(content)) +'\n\n'
+                elif request.startswith(b"GET /phpmyadmin "):
+                    response = 'HTTP/1.0 301 OK\nDate: ' + now + '\nServer: Apache\nLocation: /phpmyadmin/' +'\n\n'
+                    content = b''
+                elif request.startswith(b"GET /phpmyadmin/"):
+                    url = request.replace(b"GET ",b"").split(b" HTTP")[0]
+                    fname = os.path.basename(url).split(b"?")[0]
+                    if request.startswith(b"GET /phpmyadmin/ ") or request.startswith(b"GET /phpmyadmin/index.php"):
+                        # Get the content of index.php
+                        fin = open(b'phpmyadmin/index.php', 'rb')
+                        content = fin.read()
+                        fin.close()
+                        
+                        # Send HTTP response                        
+                        response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: text/html;charset=UTF-8\nContent-Length:' + str(len(content)) +'\n\n' 
+                    else:
+                        fin = open(b'phpmyadmin/phpMyAdmin_files/' + fname, 'rb')
+                        content = fin.read()
+                        fin.close()
+                        respons = content
+                        if fname.endswith(b".ico"):
+                            response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: image/x-icon\nContent-Length:' + str(len(content)) +'\n\n'   
+                        elif fname.endswith(b".gif"):
+                            response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: image/gif\nContent-Length:' + str(len(content)) +'\n\n'                               
+                        elif fname.endswith(b".png"):
+                            response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: image/png\nContent-Length:' + str(len(content)) +'\n\n'
+                        elif fname.endswith(b".css"):
+                            response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: text/css\nContent-Length:' + str(len(content)) +'\n\n'                               
+                        else:
+                            response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: text/html;charset=UTF-8\nContent-Length:' + str(len(content)) +'\n\n' 
+
             elif request.startswith(b"POST / "):
                 body=readBody(conn)
-                print(body)                
-                response = 'HTTP/1.0 401 Unauthorized\n\n<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN"><html><head><title>401 Unauthorized</title></head><body><h1>Error 401 - Unauthorized</h1><p>Access is denied, invalid username or password.</p></body></html>'			
-
-            logger.info(request.decode("UTF-8").replace("\r\n\r\n","\n")+body.decode("UTF-8"))
+                print(body)
+                logger.info(body)
+                response = 'HTTP/1.0 401 Unauthorized\n\n<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN"><html><head><title>401 Unauthorized</title></head><body><h1>Error 401 - Unauthorized</h1><p>Access is denied, invalid username or password.</p></body></html>'
+            elif request.startswith(b"POST /phpmyadmin/index.php "):
+                body=readBody(conn)
+                print(body)
+                logger.info(body)
+                fin = open(b'phpmyadmin/indexfailed.php', 'rb')
+                content = fin.read()
+                fin.close()
+                # Send HTTP response                        
+                response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: text/html;charset=UTF-8\nContent-Length:' + str(len(content)) +'\n\n'                                 
+            
+            logger.info(request.decode("UTF-8").replace("\r\n\r\n","\n").replace("\n\n","\n")+body.decode("UTF-8"))
             conn.sendall(response.encode())
-            raise Exception("response succeed")			
+            conn.sendall(content)
+            raise Exception("response succeed")
+            
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
         print(str(count)+"@"+clientAddr + " -> " + str(e))
         conn.close()
-    logger.info(str(count)+"@"+clientAddr + " -> disconnected")
-    print(str(count)+"@"+clientAddr + " -> disconnected")
+        
+    #logger.info(str(count)+"@"+clientAddr + " -> disconnected")
+    #print(str(count)+"@"+clientAddr + " -> disconnected")
 
 #entry point
 VERSION = "0.1a"
