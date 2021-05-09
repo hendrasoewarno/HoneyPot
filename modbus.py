@@ -17,12 +17,23 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from _thread import *
 
-def read(conn):
-    conn.setblocking(0)
-    ready = select.select([conn], [], []) #blocks until at least one file descriptor is ready
-    if ready[0]:
-        data = conn.recv(300)
-    return data
+def readTCPPDU(conn, length):
+    text = b''
+    while len(text) < length:
+        data = conn.recv(1)
+        if not data:
+            raise Exception("disconnect from client")
+        text += data
+    return text
+
+def readMBAPHeader(conn):
+    text = b''
+    while len(text) < 6:
+        data = conn.recv(1)
+        if not data:
+            raise Exception("disconnect from client")
+        text += data
+    return text
     
 def threaded_client(conn, address, count, logger):
     #print (conn.getsockname())
@@ -31,28 +42,50 @@ def threaded_client(conn, address, count, logger):
     data = ""
     try:
         while True:
-            data = read(conn)
+            #https://www.bb-elec.com/Learning-Center/All-White-Papers/Modbus/Modbus-TCP-IP-at-a-Glance.aspx            
             #0001 0000 0006 15 03 006B 0003
             '''
-            Transaction Id 	Protocol 	Length 	Unit Address 	Message/PDU
-            2 Bytes 	2 Bytes 	2 Bytes 	1 Byte       	N Bytes
+            <------------------- MBAP Header ------><---------------------- Modbus TCP/PDU ----------------->
+            TransactionId  ProtocolId   Length      UnitId          FunctionCode    DataAddr    NumOfRegister
+            2 Bytes         2 Bytes     2 Bytes     1 Byte          1 Byte          2 Bytes     2 Bytes
             '''
-            MBAP = data[0:7]
-            TransactionId = MBAP[0:2]
-            ProtocolId = MBAP[2:4]
-            Length = int.from_bytes(MBAP[4:6],byteorder='big')
-            UnitId = MBAP[6:7]
+            MBAPHeader = readMBAPHeader(conn)
+            TransactionId = MBAPHeader[0:2]
+            ProtocolId = MBAPHeader[2:4]
+            Length = int.from_bytes(MBAPHeader[4:6],byteorder='big')
+            print(Length)
             
-            Message = data[7:] #PDU
-            FunctionCode = int.from_bytes(Message[0:1],byteorder='big')
-            dataAddr = int.from_bytes(Message[1:3],byteorder='big')
-            numOfRegister = int.from_bytes(Message[3:5],byteorder='big')
+            MessageTCPPDU = readTCPPDU(conn, Length)
+            UnitId = MessageTCPPDU[0:1]
+            FunctionCode = int.from_bytes(MessageTCPPDU[1:2],byteorder='big')
+            '''
+            01 Read discrete output
+            02 Read a digital input
+            03 Read a analog output
+            04 Read a analog input
+            05 Write discreate output
+            06 Read analog output
+            0F Write multiple discrete pins
+            10 Write multiple analog outputs            
+            '''
+            DataAddr = int.from_bytes(MessageTCPPDU[2:4],byteorder='big')
+            NumOfRegister = int.from_bytes(MessageTCPPDU[4:6],byteorder='big')
+            
+            pdict = {"TransactionId":int.from_bytes(TransactionId,byteorder='big'),
+                "ProtocolId": int.from_bytes(ProtocolId,byteorder='big'),
+                "Length": Length,
+                "UnitId": int.from_bytes(UnitId,byteorder='big'),
+                "FunctionCode": FunctionCode,
+                "DataAddr": DataAddr,
+                "NumOfRegister": NumOfRegister}
+            print(pdict)
+            logger.info(pdict)
             
             #Response with dummy error data
             #https://ipc2u.com/articles/knowledge-base/detailed-description-of-the-modbus-tcp-protocol-with-command-examples/
-            messageLength = 3
-            errorResponse = TransactionId + ProtocolId + messageLength.to_bytes(2, byteorder='big') + UnitId + (FunctionCode | 0b10000000).to_bytes(1, byteorder='big') + b'\x06' # The slave is busy processing the command. The master must repeat the message later when the slave is freed.
             '''
+            The response will contain the modified Function code, its high-order bit will be 1. 
+            
             01	The received function code can not be processed.
             02	The data address specified in the request is not available.
             03	The value contained in the query data field is an invalid value.
@@ -62,14 +95,20 @@ def threaded_client(conn, address, count, logger):
             07	The slave can not execute the program function specified in the request. This code is returned for an unsuccessful program request using functions with numbers 13 or 14. The master must request diagnostic information or error information from the slave.
             08	The slave detected a parity error when reading the extended memory. The master can repeat the request, but usually in such cases, repairs are required.
             '''
+            
+            message = UnitId + (FunctionCode | 0b10000000).to_bytes(1, byteorder='big') + b'\x06' # The slave is busy processing the command. The master must repeat the message later when the slave is freed.
+            messageLength = len(message)
+            errorResponse = TransactionId + ProtocolId + messageLength.to_bytes(2, byteorder='big') + message
+
             conn.sendall(errorResponse)
 
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
         print(str(count)+"@"+clientAddr + " -> " + str(e))
         conn.close()
-    logger.info(str(count)+"@"+clientAddr + " -> disconnected")
-    print(str(count)+"@"+clientAddr + " -> disconnected")
+        
+    #logger.info(str(count)+"@"+clientAddr + " -> disconnected")
+    #print(str(count)+"@"+clientAddr + " -> disconnected")
 
 #entry point
 VERSION = "0.1a"
@@ -103,12 +142,8 @@ print("Modbus HoneyPot " + VERSION + " ready at port " + str(port))
 ServerSocket.listen(5)
 
 while True:
-    try:
-        Client, address = SecureServerSocket.accept()
-        Client.settimeout(15)
-        ThreadCount += 1
-        start_new_thread(threaded_client, (Client, address, ThreadCount, logger))
-    except Exception as e:
-        print(str(e))
-
+    Client, address = ServerSocket.accept()
+    Client.settimeout(15)
+    ThreadCount += 1
+    start_new_thread(threaded_client, (Client, address, ThreadCount, logger))        
 ServerSocket.close()
