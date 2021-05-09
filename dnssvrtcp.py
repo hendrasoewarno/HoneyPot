@@ -155,7 +155,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 #create logrotate daily, keep 30 days
-handler = TimedRotatingFileHandler('HPOTdns.log',
+handler = TimedRotatingFileHandler('HPOTdnsTCP.log',
     when='midnight',
     interval=1,
     backupCount=30)
