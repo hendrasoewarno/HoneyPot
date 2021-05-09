@@ -56,9 +56,9 @@ def parseDNSQ(packet):
     ANCOUNT = int.from_bytes(header[6:8],byteorder='big')
     NSCOUNT = int.from_bytes(header[8:10],byteorder='big')
     ARCOUNT = int.from_bytes(header[10:12],byteorder='big')
-    
-    hdict = {"ID":hex(ID), "QR": QR , "Opcode": Opcode, "AA":AA, "TC":TC, "RD":RD, "RA":RA, "Z":Z, "RCODE":RCODE, "QDCOUNT": QDCOUNT, "ANCOUNT": ANCOUNT, "NSCOUNT": NSCOUNT, "ARCOUNT": ARCOUNT}   
-    
+
+    hdict = {"ID":hex(ID), "QR": QR , "Opcode": Opcode, "AA":AA, "TC":TC, "RD":RD, "RA":RA, "Z":Z, "RCODE":RCODE, "QDCOUNT": QDCOUNT, "ANCOUNT": ANCOUNT, "NSCOUNT": NSCOUNT, "ARCOUNT": ARCOUNT}
+
     questions = packet[12:]
 
     '''
@@ -73,11 +73,11 @@ def parseDNSQ(packet):
     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
     |                     QCLASS                    |
     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+        
-    '''    
+    '''
     QNAME = b''
     QTYPE = 0
     QCLASS = 0
-    
+
     qlist = []
     for qi in range(0, QDCOUNT):
         while questions[0:1] != b'\x00':
@@ -85,20 +85,20 @@ def parseDNSQ(packet):
             if len(QNAME) > 0:
                 QNAME += b'.'
             QNAME += questions[1:1+nlen]
-            questions = questions[1+nlen:]        
-        
+            questions = questions[1+nlen:]
+
         QTYPE = int.from_bytes(questions[1:3],byteorder='big')
         QCLASS = int.from_bytes(questions[3:5],byteorder='big')
-        
+
         qlist.append({"QNAME":QNAME, "QTYPE":QTYPE, "QCLASS":QCLASS})
-        
+
     dnsq = {"header":hdict, "questions":qlist}
     return dnsq
-    
+
 def refuseDNSA(packet):
     refused = b'\x80\x85'
     return packet[0:2] + refused +  packet[4:]
-    
+
 def readMsg(conn, length):
     text = b""
     while len(text) < length:
@@ -106,8 +106,8 @@ def readMsg(conn, length):
         if not data:
             raise Exception("disconnect from client")
         text += data
-    return text    
-    
+    return text
+
 def readMsgLength(conn):
     text = b""
     while len(text) < 2:
@@ -115,33 +115,33 @@ def readMsgLength(conn):
         if not data:
             raise Exception("disconnect from client")
         text += data
-    return int.from_bytes(questions[0:1], byteorder='big')
-    
+    return int.from_bytes(text[0:2], byteorder='big')
+
 def threaded_client(conn, address, count, logger):
     #print (conn.getsockname())    
     serverAddr = conn.getsockname()[0]
     clientAddr = address[0]
-    logger.info(str(count)+"@"+clientAddr + " -> connected to " + serverAddr) 
+    logger.info(str(count)+"@"+clientAddr + " -> connected to " + serverAddr)
     print(str(count)+"@"+clientAddr + " -> connected to " + serverAddr)
-    
+
     try:
-        msgLength = readMsgLength(conn)
-        msg = readMsg(msgLength)
-        print(parseDNSQ(msg))
-        logger.info(parseDNSQ(msg))
-        dnsr = refuseDNSA(msg)
-        #print(parseDNSQ(dnsr))
-        conn.sendall(dnsr)
-				
+        while True:
+            msgLength = readMsgLength(conn)
+            msg = readMsg(conn, msgLength)
+            print(parseDNSQ(msg))
+            logger.info(parseDNSQ(msg))
+            dnsr = refuseDNSA(msg)
+            #print(parseDNSQ(dnsr))
+            conn.sendall(len(dnsr).to_bytes(2, byteorder='big') + dnsr)
+            time.sleep(1) # Sleep for 2 seconds
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
         print(str(count)+"@"+clientAddr + " -> " + str(e))
-    
+
     conn.close()
 
     logger.info(str(count)+"@"+clientAddr + " -> disconnected")
-    print(str(count)+"@"+clientAddr + " -> disconnected")    
-
+    print(str(count)+"@"+clientAddr + " -> disconnected")
 
 VERSION = "0.1a"
 
@@ -152,15 +152,15 @@ ThreadCount = 0
 
 #create logger object
 logger = logging.getLogger()
-logger.setLevel(logging.INFO) 
+logger.setLevel(logging.INFO)
 
 #create logrotate daily, keep 30 days
 handler = TimedRotatingFileHandler('HPOTdns.log',
     when='midnight',
     interval=1,
     backupCount=30)
-	
-log_format="%(asctime)s %(levelname)s %(threadName)s %(message)s"	
+
+log_format="%(asctime)s %(levelname)s %(threadName)s %(message)s"
 handler.setFormatter(logging.Formatter(log_format))	
 logger.addHandler(handler)
 
@@ -169,7 +169,7 @@ try:
 except Exception as e:
     print(str(e))
 
-logger.info("DNS HoneyPot " + VERSION + " ready at port " + str(port))  
+logger.info("DNS HoneyPot " + VERSION + " ready at port " + str(port))
 print("DNS HoneyPot " + VERSION + " ready at port " + str(port))
 ServerSocket.listen(5)
 
