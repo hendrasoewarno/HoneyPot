@@ -2,8 +2,8 @@
 Hendra Soewarno (0119067305)
 Honeypot DNS ini tidak disertai pembatasan jumlah thread, sehingga perlu dilakukan
 pembatasan pada level firewall.
-/sbin/iptables  -A INPUT -p udp --syn --dport 5353 -m connlimit --connlimit-above 50 -j REJECT
-DNS mensimulasikan server ftp untuk sebagai honeypot yang menarik penyerang
+/sbin/iptables  -A INPUT -p tcp --syn --dport 5353 -m connlimit --connlimit-above 50 -j REJECT
+DNS mensimulasikan server dns(tcp) untuk sebagai honeypot yang menarik penyerang
 untuk melakukan bruteforce password. Honeypot akan merekam semua userid dan password
 yang dicoba penyerang, sehingga menjadi early warning bagi administrator terkait dengan
 userid/password yang compromis.
