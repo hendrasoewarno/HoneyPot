@@ -177,5 +177,5 @@ while True:
     Client, address = ServerSocket.accept()
     Client.settimeout(4)
     ThreadCount += 1
-    start_new_thread(threaded_client, (Client, address, ThreadCount, logger, context))        
+    start_new_thread(threaded_client, (Client, address, ThreadCount, logger))        
 ServerSocket.close()
