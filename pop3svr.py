@@ -70,6 +70,8 @@ def threaded_client(conn, address, count, logger, context):
             response='-ERR\r\n'
             if request.startswith(b"QUIT"):
                 response='+OK signing off\r\n';
+            elif request.upper().startswith(b"CAPA"):
+                response='+OK\r\nSTLS\r\nSASL PLAIN\r\n'; 		
             elif request.upper().startswith(b"STLS"):
                 response='+OK Begin TLS negotiation\r\n';                
             elif request.startswith(b"USER"):
