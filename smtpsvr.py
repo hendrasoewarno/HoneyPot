@@ -18,6 +18,22 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from _thread import *
+import base64
+import hashlib
+import hmac
+
+def plainText(auth):
+    auth_bytes = auth.encode('ascii')
+    base64_bytes = base64.b64encode(auth_bytes)
+    base64_message = base64_bytes.decode('ascii')
+    return base64_message
+    
+def cram_md5(user, password, challenge):
+    password = password.encode('utf-8')
+    challenge = base64.b64decode(challenge)
+    digest = hmac.HMAC(password, challenge, hashlib.md5).hexdigest()
+    response = '{} {}'.format(user, digest).encode()
+    return base64.b64encode(response).decode()
 
 def queueNo():
     return round(time.time() * 1000) % 100
@@ -60,7 +76,11 @@ def threaded_client(conn, address, count, logger, context):
     strwelcome = b"220 SMTP Server Ready\r\n"
     conn.sendall(strwelcome)
     data = False
+    challenge=plainText(str(count)+clientAddr+serverAddr)
+    user = ""
+    password = ""
     TLSSSLconn = None
+    step = 0
 
     try:
         while True:
@@ -74,13 +94,52 @@ def threaded_client(conn, address, count, logger, context):
             if request.upper().startswith(b"QUIT"):
                 response='221 Bye\r\n';
             elif request.upper().startswith(b"RSET"):
-                response='250 Ok\r\n';                
+                response='250 Ok\r\n';
+            #https://en.wikipedia.org/wiki/SMTP_Authentication                
             elif request.upper().startswith(b"HELO") or request.upper().startswith(b"EHLO"):
                 cmd = request.decode("utf-8")
                 domain = cmd[5:-2]
-                response='250 Helo ' + domain + '\r\n250-STARTTLS\r\n';
+                response='250 Helo ' + domain + '\r\n250-AUTH LOGIN PLAIN CRAM-MD5\r\n250-STARTTLS\r\n';                
             elif request.upper().startswith(b"STARTTLS"):
                 response='220 Ready to start TLS\r\n';
+            #star auth plain
+            elif request.upper().startswith(b"AUTH PLAIN"):
+                cmd = request.decode("utf-8")
+                auth = cmd[10:-2]
+                if auth==plainText("\0root\0password"):
+                    response = "235 Authentication successful"
+                else:
+                    response = "501 Authentication failed"
+            #end auth plain
+            #start auth login
+            elif request.upper().startswith(b"AUTH LOGIN"):
+                response = "334 VXNlcm5hbWU6"
+                step=1
+            elif step==1:
+                user = request.decode("utf-8")[0:-2]
+                response = "334 UGFzc3dvcmQ6"
+                step=2
+            elif step==2:
+                password = request.decode("utf-8")[0:-2]
+                if user==plainText("root") and password==plainText("password"):
+                    response = "235 Authentication successful"
+                else:
+                    response = "501 Authentication failed"                
+                step = 0
+            #end auth login
+            #start CRAM-MD5
+            elif request.upper().startswith(b"AUTH CRAM-MD5"):
+                challenge = plainText(challenge)
+                response = "334 " + challenge
+                step=3
+            elif step==3:
+                auth = request.decode("utf-8")[0:-2]
+                if auth==cram_md5("root","password",challenge):
+                    response = "235 Authentication successful"
+                else:
+                    response = "501 Authentication failed"                
+                step = 0            
+            #end AUTH CRAM-MD5            
             elif request.upper().startswith(b"VRFY"):
                 response='252 VRFY forbidden\r\n';
             elif request.upper().startswith(b"EXPN"):
@@ -101,6 +160,7 @@ def threaded_client(conn, address, count, logger, context):
                 response='250 Ok: queued as ' + str(queueNo()) + '\r\n';
 					
             chooseSocket(conn, TLSSSLconn).sendall(response.encode())
+            print(response)
                             
             if request.startswith(b"QUIT"):
                 raise Exception("Client QUIT")
