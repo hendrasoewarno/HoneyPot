@@ -77,7 +77,7 @@ def threaded_client(conn, address, count, logger, context):
     conn.sendall(strwelcome)
     data = False
     challenge=plainText(str(count)+clientAddr+serverAddr)
-    user = ""
+    userid = ""
     password = ""
     TLSSSLconn = None
     step = 0
@@ -102,42 +102,42 @@ def threaded_client(conn, address, count, logger, context):
                 response='250 Helo ' + domain + '\r\n250-AUTH LOGIN PLAIN CRAM-MD5\r\n250-STARTTLS\r\n';                
             elif request.upper().startswith(b"STARTTLS"):
                 response='220 Ready to start TLS\r\n';
-            #star auth plain
+            #start auth plain
             elif request.upper().startswith(b"AUTH PLAIN"):
                 cmd = request.decode("utf-8")
                 auth = cmd[10:-2]
                 if auth==plainText("\0root\0password"):
-                    response = "235 Authentication successful"
+                    response = "235 Authentication successful\r\n"
                 else:
-                    response = "501 Authentication failed"
+                    response = "501 Authentication failed\r\n"
             #end auth plain
             #start auth login
             elif request.upper().startswith(b"AUTH LOGIN"):
-                response = "334 VXNlcm5hbWU6"
+                response = "334 VXNlcm5hbWU6\r\n"
                 step=1
             elif step==1:
-                user = request.decode("utf-8")[0:-2]
-                response = "334 UGFzc3dvcmQ6"
+                userid = request.decode("utf-8")[0:-2]
+                response = "334 UGFzc3dvcmQ6\r\n"
                 step=2
             elif step==2:
                 password = request.decode("utf-8")[0:-2]
-                if user==plainText("root") and password==plainText("password"):
-                    response = "235 Authentication successful"
+                if userid==plainText("root") and password==plainText("password"):
+                    response = "235 Authentication successful\r\n"
                 else:
-                    response = "501 Authentication failed"                
+                    response = "501 Authentication failed\r\n"                
                 step = 0
             #end auth login
             #start CRAM-MD5
             elif request.upper().startswith(b"AUTH CRAM-MD5"):
                 challenge = plainText(challenge)
-                response = "334 " + challenge
+                response = "334 " + challenge + "\r\n"
                 step=3
             elif step==3:
                 auth = request.decode("utf-8")[0:-2]
                 if auth==cram_md5("root","password",challenge):
-                    response = "235 Authentication successful"
+                    response = "235 Authentication successful\r\n"
                 else:
-                    response = "501 Authentication failed"                
+                    response = "501 Authentication failed\r\n"                
                 step = 0            
             #end AUTH CRAM-MD5            
             elif request.upper().startswith(b"VRFY"):
@@ -162,13 +162,12 @@ def threaded_client(conn, address, count, logger, context):
             chooseSocket(conn, TLSSSLconn).sendall(response.encode())
             print(response)
                             
-            if request.startswith(b"QUIT"):
-                raise Exception("Client QUIT")
-            elif request.startswith(b"AUTH TLS"):
+            if request.upper().startswith(b"STARTTLS"):
                 TLSSSLconn=context.wrap_socket(conn, server_side=True)
-			
-            if request.upper().startswith(b"QUIT"):
+                print("TLS started")                
+            elif request.startswith(b"QUIT"):
                 raise Exception("Client QUIT")
+                
     except Exception as e:
         logger.info(str(count)+"@"+clientAddr + " -> " + str(e))
         print(str(count)+"@"+clientAddr + " -> " + str(e))
