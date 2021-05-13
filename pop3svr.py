@@ -127,7 +127,7 @@ def threaded_client(conn, address, count, logger, context):
                     response = "-ERR Authentication failed\r\n"              
                 step = 0
             #end auth login
-            elif auth==6:
+            elif step==6:
                 if request.upper().startswith(b"STAT"):
                     response='+OK 1 100\r\n'
                 elif request.upper().startswith(b"LIST") or request.upper().startswith(b"TOP"):
