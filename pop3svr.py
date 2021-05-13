@@ -3,7 +3,7 @@ Hendra Soewarno (0119067305)
 Honeypot pop3 ini tidak disertai pembatasan jumlah thread, sehingga perlu dilakukan
 pembatasan pada level firewall.
 /sbin/iptables  -A INPUT -p tcp --syn --dport 1110 -m connlimit --connlimit-above 50 -j REJECT
-POPSvr mensimulasikan server pop untuk sebagai honeypot yang menarik penyerang
+POPSvr mensimulasikan server pop3 untuk sebagai honeypot yang menarik penyerang
 untuk melakukan bruteforce password. Honeypot akan merekam semua userid dan password
 yang dicoba penyerang, sehingga menjadi early warning bagi administrator terkait dengan
 userid/password yang compromis.
@@ -112,11 +112,11 @@ def threaded_client(conn, address, count, logger, context):
             #end auth plain            
             #start auth login
             elif request.upper().startswith(b"AUTH LOGIN"):
-                response = "+ VXNlcm5hbWU6"
+                response = "+ VXNlcm5hbWU6\r\n"
                 step=4
             elif step==4:
                 userid = request.decode("utf-8")[0:-2]
-                response = "+ UGFzc3dvcmQ6"
+                response = "+ UGFzc3dvcmQ6\r\n"
                 step=5
             elif step==5:
                 password = request.decode("utf-8")[0:-2]
