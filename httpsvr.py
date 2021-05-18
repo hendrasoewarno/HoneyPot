@@ -52,9 +52,9 @@ def threaded_client(conn, address, count, logger):
         while True:       
             request=readRequest(conn)
             print(request)
-            body=b""
+            body=b''
             now = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
-            
+            content = b''
             if request.startswith(b"GET /"):
                 if request.startswith(b"GET / ") or request.startswith(b"GET /index.html "):
                     # Get the content of index.html
@@ -66,7 +66,6 @@ def threaded_client(conn, address, count, logger):
                     response = 'HTTP/1.0 200 OK\nDate: ' + now + '\nServer: Apache\nContent-Type: text/html;charset=UTF-8\nContent-Length:' + str(len(content)) +'\n\n'
                 elif request.startswith(b"GET /phpmyadmin "):
                     response = 'HTTP/1.0 301 OK\nDate: ' + now + '\nServer: Apache\nLocation: /phpmyadmin/' +'\n\n'
-                    content = b''
                 elif request.startswith(b"GET /phpmyadmin/"):
                     url = request.replace(b"GET ",b"").split(b" HTTP")[0]
                     fname = os.path.basename(url).split(b"?")[0]
