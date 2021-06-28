@@ -134,7 +134,7 @@ def parsePacketAndUpdate(client, address, packet):
             4     Acknowledgment (ACK)
             5     Error (ERROR)
     '''
-    if opcode < 3: #RRQ or WRQ
+    if opcode == 1 or opcode == 2: #RRQ or WRQ
         print(packet)
         logger.info(packet)
         firstZPos = packet[2:].find(b'\0')
