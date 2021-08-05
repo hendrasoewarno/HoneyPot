@@ -80,3 +80,6 @@ Menjalankan section API Server untuk menyediakan WebUI + API melalui browser yan
 python3 ohp.py --start-api-server
 ```
 Aktifkan browser dan browse http://127.0.0.1:5000
+
+# Self build HoneyPot
+Pada tulisan ini juga dilengkapi dengan berbagai Self build Honeypot dengan mengacu pada source code terlampir
