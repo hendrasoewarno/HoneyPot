@@ -99,7 +99,7 @@ def threaded_client(conn, address, count, logger, context):
             elif request.upper().startswith(b"HELO") or request.upper().startswith(b"EHLO"):
                 cmd = request.decode("utf-8")
                 domain = cmd[5:-2]
-                response='250 Helo ' + domain + '\r\n250-AUTH LOGIN PLAIN CRAM-MD5\r\n250-STARTTLS\r\n';                
+                response='250-' + domain + '\r\n250-AUTH LOGIN PLAIN CRAM-MD5\r\n250-STARTTLS\r\n';                
             elif request.upper().startswith(b"STARTTLS"):
                 response='220 Ready to start TLS\r\n';
             #start auth plain
